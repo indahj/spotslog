@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS saved_places;
+DROP TABLE IF EXISTS visit_photos;
+DROP TABLE IF EXISTS visits;
+DROP TABLE IF EXISTS place_photos;
+DROP TABLE IF EXISTS places;
+DROP TABLE IF EXISTS users;
+
+DROP TYPE IF EXISTS place_visibility;
+DROP TYPE IF EXISTS place_source;
+DROP TYPE IF EXISTS place_category;
+DROP TYPE IF EXISTS user_role;
