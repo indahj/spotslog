@@ -6,7 +6,7 @@ import RegisterView from "@/views/RegisterView.vue";
 import VisitHistoryView from "@/views/VisitHistoryView.vue";
 import WishlistView from "@/views/WishlistView.vue";
 import AddPlaceView from "@/views/AddPlaceView.vue";
-
+import { getToken } from "@/api/client";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -50,5 +50,10 @@ const router = createRouter({
   ],
 });
 
+router.beforeEach((to) => {
+  if (to.meta.requiresAuth && !getToken()) {
+    return {name: "login", query: {redirect: to.fullPath}}
+  }
+})
 
 export default router;
