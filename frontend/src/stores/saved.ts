@@ -17,7 +17,7 @@ export const useSavedStore = defineStore("saved", () => {
     try {
       saved.value = await savedApi.list();
     } catch (e) {
-      error.value = e instanceof Error ? e.message : "Falied to load wishlist";
+      error.value = e instanceof Error ? e.message : "Failed to load wishlist";
     } finally {
       loading.value = false;
     }
