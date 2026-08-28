@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { useAuthStore } from './stores/auth';
+
+const auth = useAuthStore()
+const router = useRouter()
+
+function handleLogout() {
+  auth.logout();
+  router.push({name: "home"})
+}
+
+
 </script>
 
 <template>
@@ -9,8 +20,16 @@ import { RouterLink, RouterView } from 'vue-router'
 
       <nav>
         <RouterLink :to="{ name: 'home' }">Discover</RouterLink>
-        <RouterLink :to="{ name: 'login' }">Log in</RouterLink>
-        <RouterLink :to="{ name: 'register' }">Sign up</RouterLink>
+        <template v-if="auth.isAuthenticated">
+          <RouterLink :to="{ name: 'visits'}">My Visits </RouterLink>
+          <RouterLink :to="{ name: 'wishlist'}">Wishlist </RouterLink>
+          <RouterLink :to="{ name: 'add-place'}">Add Place </RouterLink>
+          <button @click="handleLogout">Log out</button>
+        </template>
+        <template v-else>
+          <RouterLink :to="{ name: 'login' }">Log in</RouterLink>
+          <RouterLink :to="{ name: 'register' }">Sign up</RouterLink>
+        </template>
       </nav>
     </div>
   </header>
