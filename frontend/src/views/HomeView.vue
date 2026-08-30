@@ -1,7 +1,45 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { CATEGORY_LABELS, type PlaceCategory } from "@/api/types";
+import PlaceCard from "@/components/PlaceCard.vue";
+import { useAuthStore } from "@/stores/auth";
+import { usePlacesStore } from "@/stores/places";
+import { useSavedStore } from "@/stores/saved";
+import { useVisitsStore } from "@/stores/visits";
+import { onMounted, ref } from "vue";
 
+const places = usePlacesStore()
+const auth = useAuthStore()
+const saved = useSavedStore()
+const visits = useVisitsStore()
+
+const category = ref<PlaceCategory | "">("")
 const area = ref("")
+
+const categories = Object.keys(CATEGORY_LABELS) as PlaceCategory[]
+
+async function applyFilters() {
+  if (!category.value && !area.value) {
+    await places.loadHomepage()
+    return
+  }
+  await places.search({
+    category: category.value || undefined,
+    area: area.value || undefined
+  })
+}
+
+function resetFilters() {
+  category.value = ""
+  area.value = ""
+  places.loadHomepage()
+}
+
+onMounted(async () => {
+  await places.loadHomepage()
+  if (auth.isAuthenticated) {
+    await Promise.all([saved.load(), visits.load()])
+  }
+})
 
 </script>
 
@@ -30,7 +68,7 @@ const area = ref("")
       </div>
     </section>
 
-    <form id="places" class="filters card">
+    <form id="places" class="filters card" @submit.prevent="applyFilters">
       <!-- <div class="field">
         <label for="q">Search</label>
         <input id="q" v-model="query" placeholder="Place name…" />
@@ -38,10 +76,10 @@ const area = ref("")
 
       <div class="field">
         <label for="category">Category</label>
-        <select id="category" >
+        <select id="category" v-model="category" >
           <option value="">All categories</option>
-          <option key="c" value="c">
-            test
+          <option v-for="cat in categories" :key="cat" :value="cat">
+            {{CATEGORY_LABELS[cat]}}
           </option>
         </select>
       </div>
@@ -53,15 +91,31 @@ const area = ref("")
 
       <div class="filter-actions">
         <button class="primary" type="submit">Filter</button>
-        <button type="button">Reset</button>
+        <button type="button" @click="resetFilters">Reset</button>
       </div>
     </form>
 
     <div class="toolbar">
-      <p class="muted">places</p>
+      <p class="muted">{{ places.places.length }} places</p>
     </div>
 
+    <p v-if="places.loading" class="muted">Loading...</p>
+    <p v-else-if="places.error" class="error">{{ places.error }}</p>
+    <p v-else-if="places.places.length===0" class="muted">No places match this filter yet.</p>
 
+    <div v-else class="grid">
+      <PlaceCard
+        v-for="place in places.places"
+        :key="place.id"
+        :place="place"
+        :saved="saved.savedPlaceIds.has(place.id)"
+        :visited="visits.visitedPlaceIds.has(place.id)"
+        :show-actions="auth.isAuthenticated"
+        @toggle-saved="saved.toggle"
+        @mark-visited="visits.markVisited"
+
+      />
+    </div>
 
   </div>
 </template>
@@ -235,6 +289,12 @@ const area = ref("")
 
 .art-photo-sun {
   fill: #e8b95c;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
 @media (max-width: 860px) {
