@@ -13,22 +13,23 @@ type User struct {
 }
 
 type Place struct {
-	ID           int            `json:"id"`
-	Name         string         `json:"name"`
-	Category     string         `json:"category"`
-	Address      string         `json:"address"`
-	District     *string        `json:"district,omitempty"`
-	Lat          float64        `json:"lat"`
-	Lng          float64        `json:"lng"`
-	Description  *string        `json:"description,omitempty"`
-	PriceRange   *string        `json:"price_range,omitempty"`
-	OpeningHours map[string]any `json:"opening_hours,omitempty"`
-	Menu         map[string]any `json:"menu,omitempty"`
-	Source       string         `json:"source"`
-	Visibility   string         `json:"visibility"`
-	CreatedBy    *int           `json:"created_by,omitempty"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	ID            int            `json:"id"`
+	Name          string         `json:"name"`
+	Category      string         `json:"category"`
+	Address       string         `json:"address"`
+	District      *string        `json:"district,omitempty"`
+	Lat           float64        `json:"lat"`
+	Lng           float64        `json:"lng"`
+	Description   *string        `json:"description,omitempty"`
+	PriceRange    *string        `json:"price_range,omitempty"`
+	OpeningHours  map[string]any `json:"opening_hours,omitempty"`
+	Menu          map[string]any `json:"menu,omitempty"`
+	Source        string         `json:"source"`
+	Visibility    string         `json:"visibility"`
+	CreatedBy     *int           `json:"created_by,omitempty"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	CoverPhotoURL *string        `json:"cover_photo_url,omitempty"`
 }
 
 type PlacePhoto struct {

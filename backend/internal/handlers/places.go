@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -81,6 +82,11 @@ func (h *PlacesHandler) List(c *gin.Context) {
 		return
 	}
 
+	if err := h.attachCoverPhotos(c.Request.Context(), places); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load place photos"})
+		return
+	}
+
 	c.JSON(http.StatusOK, places)
 }
 
@@ -101,6 +107,11 @@ func (h *PlacesHandler) Homepage(c *gin.Context) {
 	places, err := scanPlaces(rows)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read places"})
+		return
+	}
+
+	if err := h.attachCoverPhotos(c.Request.Context(), places); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load place photos"})
 		return
 	}
 
@@ -400,6 +411,48 @@ func scanPlaces(rows pgx.Rows) ([]models.Place, error) {
 		places = append(places, p)
 	}
 	return places, rows.Err()
+}
+
+// attachCoverPhotos fetches one representative photo per place (the
+// earliest uploaded) and fills in each place's CoverPhotoURL — one batched
+// query rather than one per place, same reasoning as the visit photos.
+func (h *PlacesHandler) attachCoverPhotos(ctx context.Context, places []models.Place) error {
+	if len(places) == 0 {
+		return nil
+	}
+
+	ids := make([]int, len(places))
+	byID := map[int]int{}
+	for i, p := range places {
+		ids[i] = p.ID
+		byID[p.ID] = i
+	}
+
+	rows, err := h.DB.Query(ctx,
+		`SELECT place_id, url FROM place_photos WHERE place_id = ANY($1) ORDER BY place_id, created_at ASC`,
+		ids,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	seen := map[int]bool{}
+	for rows.Next() {
+		var placeID int
+		var url string
+		if err := rows.Scan(&placeID, &url); err != nil {
+			return err
+		}
+		if seen[placeID] {
+			continue
+		}
+		seen[placeID] = true
+		if idx, ok := byID[placeID]; ok {
+			places[idx].CoverPhotoURL = &url
+		}
+	}
+	return rows.Err()
 }
 
 func nullIfEmpty(s string) *string {
