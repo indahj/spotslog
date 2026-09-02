@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CATEGORY_LABELS, type PlaceCategory } from "@/api/types";
 import PlaceCard from "@/components/PlaceCard.vue";
+import PlaceMap from "@/components/PlaceMap.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usePlacesStore } from "@/stores/places";
 import { useSavedStore } from "@/stores/saved";
@@ -14,6 +15,7 @@ const visits = useVisitsStore()
 
 const category = ref<PlaceCategory | "">("")
 const area = ref("")
+const showMap = ref(false)
 
 const categories = Object.keys(CATEGORY_LABELS) as PlaceCategory[]
 
@@ -97,7 +99,12 @@ onMounted(async () => {
 
     <div class="toolbar">
       <p class="muted">{{ places.places.length }} places</p>
+      <button @click="showMap = !showMap">
+        {{ showMap ? "Hide map" : "Show map" }}
+      </button>
     </div>
+
+    <PlaceMap v-if="showMap" :places="places.places" class="map-block"/>
 
     <p v-if="places.loading" class="muted">Loading...</p>
     <p v-else-if="places.error" class="error">{{ places.error }}</p>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { placesApi } from '@/api';
 import { CATEGORY_LABELS, type Place, type PlacePhoto } from '@/api/types';
+import PlaceMap from '@/components/PlaceMap.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useSavedStore } from '@/stores/saved';
 import { useVisitsStore } from '@/stores/visits';
@@ -110,6 +111,11 @@ onMounted(async () => {
           </dl>
         </template>
       </section>
+
+      <section>
+        <PlaceMap :places="[place]" height="300px" />
+      </section>
+
 
       <section v-if="photos.length > 0" class="photos">
         <h2>Photos</h2>
