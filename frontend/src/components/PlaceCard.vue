@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CATEGORY_LABELS, type Place } from '@/api/types';
 import { RouterLink } from 'vue-router';
+import placeholderImage from "@/assets/place-placeholder.svg";
 
 
 defineProps<{
@@ -18,6 +19,12 @@ const emit = defineEmits<{
 </script>
 <template>
   <article class="card place-card">
+    <img
+      :src="place.cover_photo_url ?? placeholderImage"
+      :alt="place.name"
+      class="cover-photo"
+    />
+
     <header>
       <RouterLink :to="{ name: 'place-detail', params: { id: place.id} }">
         <h3>{{ place.name }}</h3>
@@ -47,6 +54,15 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: 0.35rem;
 }
+
+.cover-photo {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
 
 header {
   display: flex;
