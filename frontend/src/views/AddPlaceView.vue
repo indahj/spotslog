@@ -2,6 +2,7 @@
 import { placesApi } from '@/api';
 import { CATEGORY_LABELS, type PlaceCategory } from '@/api/types';
 import { useVisitsStore } from '@/stores/visits';
+import { OpenStreetMapProvider } from 'leaflet-geosearch';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -23,23 +24,44 @@ const visibility = ref<"public" | "private">("private")
 const alsoMarkVisited = ref(true)
 const photo = ref<File | null>(null)
 
+const searchResults = ref<{ label: string; lat: number; lng: number }[]>([])
+const searching = ref(false)
+let searchTimeout:ReturnType<typeof setTimeout> | undefined;
+
+const provider = new OpenStreetMapProvider({
+  params: { countrycodes: "id"}
+})
+
 const error = ref<string | null>(null)
 const submitting = ref(false)
 
-function useMyLocation() {
-  if (!navigator.geolocation) {
-    error.value = "Geolocation isn't available in this browser."
+function onAddressInput() {
+  clearTimeout(searchTimeout)
+  if (!address.value.trim()) {
+    searchResults.value = []
     return
   }
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      lat.value = Number(pos.coords.latitude.toFixed(6))
-      lng.value = Number(pos.coords.longitude.toFixed(6))
-    },
-    () => {
-      error.value = "Couldn't read your location - enter coordinates manually."
+  searchTimeout = setTimeout(async() => {
+    searching.value = true
+    try {
+      const results = await provider.search({query: address.value})
+      searchResults.value = results.map((r) => ({
+        label: r.label,
+        lat: r.y,
+        lng: r.x,
+      }))
+    } finally {
+      searching.value = false
     }
-  )
+  }, 500)
+}
+
+function selectResult(result: {label: string; lat: number; lng: number}) {
+  lat.value = Number(result.lat.toFixed(6))
+  lng.value = Number(result.lng.toFixed(6))
+  address.value = result.label
+  address.value = result.label
+  searchResults.value = []
 }
 
 function onPhotoChange(event: Event) {
@@ -127,7 +149,13 @@ async function submit() {
 
       <div class="field">
         <label for="address">Address</label>
-        <input id="address" v-model="address" required>
+        <input id="address" v-model="address" required @input="onAddressInput">
+        <p v-if="searching" class="muted">Searching...</p>
+        <ul v-if="searchResults.length > 0" class="search-results">
+          <li v-for="(result, i) in searchResults" :key="i" @click="selectResult(result)">
+            {{ result.label }}
+          </li>
+        </ul>
       </div>
 
       <div class="field">
@@ -138,13 +166,12 @@ async function submit() {
        <div class="coords">
         <div class="field">
           <label for="lat">Latitude</label>
-          <input id="lat" v-model.number="lat" type="number" step="any" required />
+          <input id="lat" v-model.number="lat" type="number" step="any" disabled/>
         </div>
         <div class="field">
           <label for="lng">Longitude</label>
-          <input id="lng" v-model.number="lng" type="number" step="any" required />
+          <input id="lng" v-model.number="lng" type="number" step="any" disabled/>
         </div>
-        <button type="button" @click="useMyLocation">Use my location</button>
       </div>
 
       <div class="field">
@@ -191,9 +218,33 @@ async function submit() {
   max-width: 560px;
 }
 
+.search-results {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.search-results li {
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.search-results li:last-child {
+  border-bottom: none;
+}
+.search-results li:hover {
+  background: var(--paper);
+}
+
 .coords {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr;
   gap: 0.7rem;
   align-items: end;
 }
