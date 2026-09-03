@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth';
+import Footer from './components/Footer.vue';
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -37,6 +38,8 @@ function handleLogout() {
   <main>
     <RouterView />
   </main>
+
+  <Footer/>
 </template>
 
 <style scoped>
