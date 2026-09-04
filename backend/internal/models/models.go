@@ -30,6 +30,8 @@ type Place struct {
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	CoverPhotoURL *string        `json:"cover_photo_url,omitempty"`
+	AverageRating *float64       `json:"average_rating,omitempty"`
+	RatingCount   int            `json:"rating_count"`
 }
 
 type PlacePhoto struct {
