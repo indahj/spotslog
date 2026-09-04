@@ -38,7 +38,8 @@ const emit = defineEmits<{
 
     <footer v-if="showActions">
       <button :class="{ active: saved }" @click="emit('toggleSaved', place.id)">
-        {{ saved? "★ Saved" : "☆ Save"  }}
+        <font-awesome-icon :icon="[saved ? 'fas' : 'far', 'bookmark']" />
+        {{ saved? "Saved" : "Save"  }}
       </button>
       <button :disabled="visited" @click="emit('markVisited', place.id)">
         {{visited ? "✓ Visited" : "Mark visited"  }}

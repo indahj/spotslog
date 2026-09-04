@@ -73,7 +73,8 @@ onMounted(async () => {
 
         <div v-if="auth.isAuthenticated" class="actions">
           <button :class="{active: saved.savedPlaceIds.has(place.id)}" @click="saved.toggle(place.id)">
-            {{ saved.savedPlaceIds.has(place.id) ? "★ Saved" : "☆ Save"  }}
+            <font-awesome-icon :icon="[saved ? 'fas' : 'far', 'bookmark']" />
+            {{ saved.savedPlaceIds.has(place.id) ? "Saved" : "Save"  }}
           </button>
 
           <button :disabled="visits.visitedPlaceIds.has(place.id)" @click="visits.markVisited(place.id)">
