@@ -3,10 +3,27 @@ import { CATEGORY_LABELS } from '@/api/types';
 import PhotoUploader from '@/components/PhotoUploader.vue';
 import { useVisitsStore } from '@/stores/visits';
 import { onMounted, ref } from 'vue';
+import { Dialog, DialogDescription, DialogPanel, DialogTitle } from '@headlessui/vue';
 
 
 const visits = useVisitsStore()
 const expandedId = ref<number | null>(null)
+const confirmingVisitId = ref<number | null>(null)
+
+function askRemove(visitId: number) {
+  confirmingVisitId.value = visitId
+}
+
+async function confirmRemove() {
+  if (confirmingVisitId.value !== null) {
+    await visits.remove(confirmingVisitId.value)
+  }
+  confirmingVisitId.value = null
+}
+
+function cancelRemove() {
+  confirmingVisitId.value = null
+}
 
 function toggleExpanded(id: number) {
   expandedId.value = expandedId.value === id ? null : id;
@@ -61,7 +78,7 @@ onMounted(() => visits.load())
             <button @click="toggleExpanded(visit.id)">
               {{ expandedId === visit.id ? "Close" : "Add photo" }}
             </button>
-            <button @click="visits.remove(visit.id)">Remove</button>
+            <button @click="askRemove(visit.id)">Remove</button>
           </div>
         </div>
 
@@ -83,6 +100,25 @@ onMounted(() => visits.load())
         </div>
       </li>
     </ul>
+
+    <Dialog :open="confirmingVisitId !== null" @close="cancelRemove" class="modal-backdrop">
+      <div class="backdrop-overlay" aria-hidden="true"/>
+        <div class="modal-wrapper">
+          <DialogPanel class="modal">
+            <DialogTitle as="h3">Removing</DialogTitle>
+            <DialogDescription class="muted">
+              Are you sure you want to remove this place from your visit history?
+              <br/><br/>
+              <span class="asterisk">(*)</span> Any photos you've added in this place will also be deleted.
+            </DialogDescription>
+            <div class="modal-actions">
+              <button type="button" @click="cancelRemove">Cancel</button>
+              <button type="button" class="danger-btn" @click="confirmRemove">Remove</button>
+            </div>
+          </DialogPanel>
+        </div>
+    </Dialog>
+
   </div>
 
 </template>
@@ -160,6 +196,61 @@ h3 {
   height: 120px;
   object-fit: cover;
   border-radius: 8px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.backdrop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.modal-wrapper {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 1.5rem;
+  max-width: 360px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.15);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+}
+
+.modal h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.modal p {
+  margin: 0;
+}
+
+.asterisk {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.danger-btn {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
 }
 
 </style>
