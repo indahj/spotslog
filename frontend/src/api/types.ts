@@ -35,6 +35,8 @@ export interface Place {
   created_at: string;
   updated_at: string;
   cover_photo_url?: string;
+  average_rating?: number;
+  rating_count?: number;
 }
 
 export interface PlacePhoto {

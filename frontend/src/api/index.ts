@@ -103,3 +103,17 @@ export const savedApi = {
   remove: (placeId: number) =>
     request<void>(`/saved/${placeId}`, { method: "DELETE", auth: true }),
 };
+
+export const ratingsApi = {
+  rate: (placeId: number, rating: number) =>
+    request<{place_id: number; rating: number}>("/ratings", {
+      method: "POST",
+      body: { place_id: placeId, rating: rating },
+      auth: true,
+    }),
+
+  getMine: (placeId: number) =>
+    request<{ rating: number | null }>(`/ratings/${placeId}`, {
+      auth: true,
+    })
+};
