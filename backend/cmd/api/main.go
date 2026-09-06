@@ -41,6 +41,7 @@ func main() {
 	placesH := &handlers.PlacesHandler{DB: pool, Storage: store}
 	visitsH := &handlers.VisitsHandler{DB: pool, Storage: store}
 	savedH := &handlers.SavedHandler{DB: pool}
+	ratingsH := &handlers.RatingsHandler{DB: pool}
 
 	r := gin.Default()
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigin))
@@ -83,6 +84,11 @@ func main() {
 		saved.Use(middleware.RequireAuth(cfg.JWTSecret))
 		saved.POST("", savedH.Create)
 		saved.DELETE("/:placeId", savedH.Delete)
+
+		ratings := api.Group("/ratings")
+		ratings.Use(middleware.RequireAuth(cfg.JWTSecret))
+		ratings.POST("", ratingsH.Rate)
+		ratings.GET("/:placeId", ratingsH.GetMine)
 	}
 
 	port := cfg.Port
