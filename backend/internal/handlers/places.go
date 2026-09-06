@@ -87,6 +87,11 @@ func (h *PlacesHandler) List(c *gin.Context) {
 		return
 	}
 
+	if err := h.attachRatings(c.Request.Context(), places); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load ratings"})
+		return
+	}
+
 	c.JSON(http.StatusOK, places)
 }
 
@@ -112,6 +117,11 @@ func (h *PlacesHandler) Homepage(c *gin.Context) {
 
 	if err := h.attachCoverPhotos(c.Request.Context(), places); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load place photos"})
+		return
+	}
+
+	if err := h.attachRatings(c.Request.Context(), places); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load ratings"})
 		return
 	}
 
@@ -453,6 +463,44 @@ func (h *PlacesHandler) attachCoverPhotos(ctx context.Context, places []models.P
 		}
 	}
 	return rows.Err()
+}
+
+func (h *PlacesHandler) attachRatings(ctx context.Context, places []models.Place) error {
+
+	if len(places) == 0 {
+		return nil
+	}
+
+	ids := make([]int, len(places))
+	byID := map[int]int{}
+	for i, p := range places {
+		ids[i] = p.ID
+		byID[p.ID] = i
+	}
+
+	rows, err := h.DB.Query(ctx,
+		`SELECT place_id, AVG(rating), COUNT(*) FROM place_ratings WHERE place_id = ANY($1) GROUP BY place_id`,
+		ids,
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var placeID int
+		var avg float64
+		var count int
+		if err := rows.Scan(&placeID, &avg, &count); err != nil {
+			return err
+		}
+		if idx, ok := byID[placeID]; ok {
+			places[idx].AverageRating = &avg
+			places[idx].RatingCount = count
+		}
+	}
+	return rows.Err()
+
 }
 
 func nullIfEmpty(s string) *string {
