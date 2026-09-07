@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { placesApi } from '@/api';
+import { authApi, placesApi } from '@/api';
 import { CATEGORY_LABELS, type PlaceCategory } from '@/api/types';
 import { useVisitsStore } from '@/stores/visits';
+import { useAuthStore } from '@/stores/auth';
 import { OpenStreetMapProvider } from 'leaflet-geosearch';
+import { computed } from 'vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 
 const router = useRouter()
 const visits = useVisitsStore()
+const auth = useAuthStore()
 
 const categories = Object.keys(CATEGORY_LABELS) as PlaceCategory[]
 
@@ -34,6 +37,7 @@ const provider = new OpenStreetMapProvider({
 
 const error = ref<string | null>(null)
 const submitting = ref(false)
+const source = computed(() => (auth.isAdmin ? "curated" : "user"))
 
 function onAddressInput() {
   clearTimeout(searchTimeout)
@@ -87,7 +91,7 @@ async function submit() {
       lng: lng.value,
       description: description.value || undefined,
       price_range: priceRange.value || undefined,
-      source: "user",
+      source: source.value,
       visibility: visibility.value
     })
 
@@ -100,7 +104,7 @@ async function submit() {
       }
     }
 
-    if (alsoMarkVisited.value) {
+    if (!auth.isAdmin && alsoMarkVisited.value) {
       await visits.markVisited(place.id)
     }
 
@@ -110,7 +114,7 @@ async function submit() {
       return
     }
 
-    if (alsoMarkVisited.value) {
+    if (!auth.isAdmin && alsoMarkVisited.value) {
       router.push({name: "visits"})
     } else {
       router.push({name: "place-detail", params: {id: place.id}})
@@ -189,7 +193,7 @@ async function submit() {
         <input id="photo" type="file" accept="image/*" @change="onPhotoChange" />
       </div>
 
-      <div class="field">
+      <div v-if="!auth.isAdmin" class="field">
         <label for="visibility">Visibility</label>
         <select id="visibility" v-model="visibility">
           <option value="private">Private — only I can see it</option>
@@ -197,7 +201,7 @@ async function submit() {
         </select>
       </div>
 
-      <label class="checkbox">
+      <label v-if="!auth.isAdmin" class="checkbox">
         <input v-model="alsoMarkVisited" type="checkbox" />
         Also add this to my visit history
       </label>

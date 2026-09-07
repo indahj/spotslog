@@ -2,11 +2,12 @@
 import { CATEGORY_LABELS, type PlaceCategory } from "@/api/types";
 import PlaceCard from "@/components/PlaceCard.vue";
 import PlaceMap from "@/components/PlaceMap.vue";
+import HeroSlideshow from "@/components/HeroSlideshow.vue";
 import { useAuthStore } from "@/stores/auth";
 import { usePlacesStore } from "@/stores/places";
 import { useSavedStore } from "@/stores/saved";
 import { useVisitsStore } from "@/stores/visits";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 const places = usePlacesStore()
 const auth = useAuthStore()
@@ -18,6 +19,9 @@ const area = ref("")
 const showMap = ref(false)
 
 const categories = Object.keys(CATEGORY_LABELS) as PlaceCategory[]
+const newestPlaces = computed(() =>
+  places.places.filter(p => p.source === "curated").slice(0,3)
+)
 
 async function applyFilters() {
   if (!category.value && !area.value) {
@@ -64,10 +68,11 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="hero-art">
-        <img src="../assets/hero.svg" alt="">
+    <div class="hero-art">
+      <HeroSlideshow v-if="newestPlaces.length > 0" :place="newestPlaces" />
+      <img v-else src="../assets/hero.svg" alt="">
+    </div>
 
-      </div>
     </section>
 
     <form id="places" class="filters card" @submit.prevent="applyFilters">
@@ -158,10 +163,14 @@ onMounted(async () => {
 
 .hero {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 2.5rem;
+  grid-template-columns: 1fr 0.95fr;
+  gap: 1rem;
   align-items: center;
   padding: 2.5rem 0 1rem;
+}
+
+.hero-art {
+  height: 340px;
 }
 
 .eyebrow {
@@ -320,6 +329,7 @@ onMounted(async () => {
   .hero-art {
     max-width: 380px;
     margin: 0 auto;
+    height: 240px;
   }
 }
 

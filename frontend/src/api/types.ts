@@ -3,6 +3,7 @@ export type PlaceCategory =
   | "cafe"
   | "museum"
   | "library"
+  | "dessert"
   | "attraction";
 
 export type PlaceSource = "curated" | "user";
@@ -80,5 +81,6 @@ export const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   cafe: "Café",
   museum: "Museum",
   library: "Library",
+  dessert: "Dessert",
   attraction: "Attraction",
 };

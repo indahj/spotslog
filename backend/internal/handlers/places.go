@@ -28,7 +28,7 @@ var errForbidden = errors.New("forbidden")
 
 type createPlaceRequest struct {
 	Name         string         `json:"name" binding:"required"`
-	Category     string         `json:"category" binding:"required,oneof=restaurant cafe museum library attraction"`
+	Category     string         `json:"category" binding:"required,oneof=restaurant cafe museum library dessert attraction"`
 	Address      string         `json:"address" binding:"required"`
 	District     *string        `json:"district"`
 	Lat          float64        `json:"lat" binding:"required"`
