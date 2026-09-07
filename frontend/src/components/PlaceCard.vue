@@ -35,6 +35,10 @@ const emit = defineEmits<{
     <p class="muted address">{{ place.address }}</p>
     <p v-if="place.district" class="muted district">{{ place.district }}</p>
     <p v-if="place.price_range" class="price">{{ place.price_range }}</p>
+    <p v-if="place.average_rating" class="rating">
+      <font-awesome-icon icon="star" class="star-icon"/>
+      {{ place.average_rating.toFixed(1) }} ({{ place.rating_count }})
+    </p>
 
     <footer v-if="showActions">
       <button :class="{ active: saved }" @click="emit('toggleSaved', place.id)">
@@ -104,6 +108,19 @@ footer button {
 button.active {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.rating {
+  margin: 0;
+  font-size: 0.87rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted);
+}
+
+.star-icon {
+  color: #f5b301;
 }
 
 </style>

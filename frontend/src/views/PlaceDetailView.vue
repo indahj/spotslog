@@ -3,21 +3,25 @@ import { placesApi } from '@/api';
 import { CATEGORY_LABELS, type Place, type PlacePhoto } from '@/api/types';
 import PlaceMap from '@/components/PlaceMap.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useRatingsStore } from '@/stores/ratings';
 import { useSavedStore } from '@/stores/saved';
 import { useVisitsStore } from '@/stores/visits';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import { Dialog, DialogDescription, DialogPanel, DialogTitle } from '@headlessui/vue';
 
 
 const route = useRoute()
 const auth = useAuthStore()
 const saved = useSavedStore()
 const visits = useVisitsStore()
+const ratings = useRatingsStore()
 
 const place = ref<Place | null>(null)
 const photos = ref<PlacePhoto[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const showRatingModal = ref(false)
 
 const placeId = computed(() => Number(route.params.id))
 
@@ -51,8 +55,25 @@ onMounted(async () => {
   await load()
   if (auth.isAuthenticated) {
     await Promise.all([saved.load(), visits.load()])
+    if (visits.visitedPlaceIds.has(placeId.value)) {
+      await ratings.fetchMine(placeId.value)
+    }
   }
 })
+
+const selectedRating = ref(0)
+
+function openRatingModal() {
+  selectedRating.value = ratings.myRatings.get(placeId.value) ?? 0
+  showRatingModal.value = true
+}
+
+async function submitRating(n: number) {
+  selectedRating.value = n
+  await ratings.rate(placeId.value, n)
+  showRatingModal.value = false
+}
+
 
 </script>
 
@@ -72,8 +93,13 @@ onMounted(async () => {
         </div>
 
         <div v-if="auth.isAuthenticated" class="actions">
+          <button v-if="visits.visitedPlaceIds.has(place.id)" @click="openRatingModal">
+            <font-awesome-icon icon="star" class="star-icon"/>
+            {{ ratings.myRatings.has(place.id) ? `Your rating: ${ratings.myRatings.get(place.id)}` : "Rate this place" }}
+          </button>
+
           <button :class="{active: saved.savedPlaceIds.has(place.id)}" @click="saved.toggle(place.id)">
-            <font-awesome-icon :icon="[saved ? 'fas' : 'far', 'bookmark']" />
+            <font-awesome-icon :icon="[saved.savedPlaceIds.has(place.id) ? 'fas' : 'far', 'bookmark']" />
             {{ saved.savedPlaceIds.has(place.id) ? "Saved" : "Save"  }}
           </button>
 
@@ -82,6 +108,29 @@ onMounted(async () => {
           </button>
         </div>
       </header>
+
+      <Dialog :open="showRatingModal" @close="showRatingModal = false" class="modal-backdrop">
+        <div class="backdrop-overlay" aria-hidden="true" />
+        <div class="modal-wrapper">
+          <DialogPanel class="modal">
+            <DialogTitle as="h3">Rate this place</DialogTitle>
+            <DialogDescription class="muted">
+              How would you rate your visit?
+            </DialogDescription>
+
+            <div class="stars">
+              <font-awesome-icon
+                v-for="n in 5"
+                :key="n"
+                :icon="[n <= selectedRating ? 'fas' : 'far', 'star']"
+                :class="{ filled: n <= selectedRating }"
+                @click="submitRating(n)"
+              />
+            </div>
+          </DialogPanel>
+        </div>
+      </Dialog>
+
 
       <p v-if="place.description" class="description">{{ place.description }}</p>
 
@@ -220,5 +269,57 @@ figure {
 figcaption {
   font-size: 0.85rem;
   margin-top: 0.3rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.backdrop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.modal-wrapper {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 1.5rem;
+  max-width: 360px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.15);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+}
+
+.modal h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.modal p {
+  margin: 0;
+}
+
+.star-icon {
+  color: #f5b301;
+}
+
+.stars .filled {
+  color: #f5b301;
 }
 </style>
