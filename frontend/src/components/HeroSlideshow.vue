@@ -66,6 +66,7 @@ onBeforeUnmount(() => {
   position: relative;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 .photo-frame img {
@@ -112,5 +113,8 @@ onBeforeUnmount(() => {
   padding: 1rem;
   font-weight: 600;
   font-size: 1.05rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

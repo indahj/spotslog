@@ -163,8 +163,8 @@ onMounted(async () => {
 
 .hero {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 2.5rem;
+  grid-template-columns: 1fr 0.95fr;
+  gap: 1rem;
   align-items: center;
   padding: 2.5rem 0 1rem;
 }
