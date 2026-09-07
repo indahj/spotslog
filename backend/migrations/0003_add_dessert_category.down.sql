@@ -1,0 +1,3 @@
+-- Postgres doesn't support removing a value from an enum type directly.
+-- Reverting this would require recreating place_category without 'dessert'
+-- and migrating any existing rows using it — not implemented here.
