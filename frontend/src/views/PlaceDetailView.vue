@@ -7,10 +7,11 @@ import { useRatingsStore } from '@/stores/ratings';
 import { useSavedStore } from '@/stores/saved';
 import { useVisitsStore } from '@/stores/visits';
 import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { Dialog, DialogDescription, DialogPanel, DialogTitle } from '@headlessui/vue';
 
 
+const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const saved = useSavedStore()
@@ -83,7 +84,7 @@ async function submitRating(n: number) {
     <p v-else-if="error" class="error">{{ error }}</p>
 
     <template v-else-if="place">
-      <RouterLink :to="{name: 'home'}" class="muted back">← Back to discover</RouterLink>
+      <button type="button" class="muted back back-btn" @click="router.back()">← Back</button>
 
       <header class="place-header">
         <div>
@@ -185,6 +186,13 @@ async function submitRating(n: number) {
   display: inline-block;
   margin-bottom: 1rem;
   font-size: 0.9rem;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .place-header {

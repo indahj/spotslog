@@ -70,7 +70,7 @@ onMounted(async () => {
 
     <div class="hero-art">
       <HeroSlideshow v-if="newestPlaces.length > 0" :place="newestPlaces" />
-      <img v-else src="../assets/hero.svg" alt="">
+      <!-- <img v-else src="../assets/hero.svg" alt=""> -->
     </div>
 
     </section>
