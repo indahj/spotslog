@@ -1,5 +1,5 @@
 import { library } from "@fortawesome/fontawesome-svg-core";
-import { faHeart as fasHeart, faBookmark as fasBookmark, faStar as fasStar } from "@fortawesome/free-solid-svg-icons";
+import { faHeart as fasHeart, faBookmark as fasBookmark, faStar as fasStar, faPen as fasPen } from "@fortawesome/free-solid-svg-icons";
 import { faHeart as farHeart, faBookmark as farBookmark, faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 
-library.add(fasHeart, fasBookmark, farHeart, farBookmark, fasStar, farStar)
+library.add(fasHeart, fasBookmark, farHeart, farBookmark, fasStar, farStar, fasPen)
