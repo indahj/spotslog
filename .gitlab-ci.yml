@@ -1,0 +1,142 @@
+stages:
+  - test
+  - publish_docker
+  - deploy_docker
+
+variables:
+  APP_NAME: spotslog
+  APP_URL: https://spotslog.ssomar.fr
+  APP_PORT: "3070"    # must match traefik/dynamic/spotslog.yml
+  MINIO_PORT: "3071"  # must match traefik/dynamic/spotslog.yml
+  S3_BUCKET: spotslog-photos
+
+# ---------- Test (branches non-main) ----------
+test_frontend:
+  stage: test
+  image: node:24-alpine
+  except:
+    - main
+  cache:
+    key: frontend-${CI_COMMIT_REF_SLUG}
+    paths:
+      - frontend/node_modules/
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
+    - npm run build
+
+test_backend:
+  stage: test
+  image: golang:1.25-alpine
+  except:
+    - main
+  variables:
+    CGO_ENABLED: "0"
+    GOPATH: ${CI_PROJECT_DIR}/.go
+  cache:
+    key: backend-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .go/pkg/mod/
+  script:
+    - cd backend
+    - go vet ./...
+    - go build ./...
+    - go test ./...
+
+# ---------- Build & Push Docker image (main) ----------
+publish_docker:
+  stage: publish_docker
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    - main
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    # No secrets as build args: they would be baked into the image layers.
+    # Runtime config is injected by the deploy job instead.
+    - docker build
+      -t "$CI_REGISTRY_IMAGE:latest"
+      -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+      .
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+
+# ---------- Deploy via SSH + Podman (main) ----------
+deploy_docker:
+  stage: deploy_docker
+  image: alpine:latest
+  only:
+    - main
+  needs:
+    - publish_docker
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+  script:
+    # Env files keep secrets off the remote command line and avoid shell-quoting
+    # issues (DATABASE_URL contains '&' and '?').
+    - |
+      umask 077
+      {
+        printf '%s\n' "DATABASE_URL=$DATABASE_URL"
+        printf '%s\n' "JWT_SECRET=$JWT_SECRET"
+        printf '%s\n' "JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-72}"
+        printf '%s\n' "S3_ENDPOINT=$APP_NAME-minio:9000"
+        printf '%s\n' "S3_ACCESS_KEY=$S3_ACCESS_KEY"
+        printf '%s\n' "S3_SECRET_KEY=$S3_SECRET_KEY"
+        printf '%s\n' "S3_BUCKET=$S3_BUCKET"
+        printf '%s\n' "S3_USE_SSL=false"
+        printf '%s\n' "S3_PUBLIC_BASE_URL=$APP_URL/$S3_BUCKET"
+        printf '%s\n' "CORS_ALLOWED_ORIGIN=$APP_URL"
+      } > app.env
+      {
+        printf '%s\n' "MINIO_ROOT_USER=$S3_ACCESS_KEY"
+        printf '%s\n' "MINIO_ROOT_PASSWORD=$S3_SECRET_KEY"
+      } > minio.env
+    - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p ~/$APP_NAME ~/traefik/dynamic && chmod 700 ~/$APP_NAME"
+    - scp -P "$SSH_PORT" app.env minio.env "$SSH_USER@$SSH_HOST:~/$APP_NAME/"
+    - scp -P "$SSH_PORT" traefik/dynamic/* "$SSH_USER@$SSH_HOST:~/traefik/dynamic/"
+    - |
+      ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << ENDSSH
+        set -e
+        echo "$CI_REGISTRY_PASSWORD" | podman login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+        podman pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+
+        podman network exists $APP_NAME || podman network create $APP_NAME
+
+        # Photo storage: created once, data kept in a named volume across deploys.
+        if ! podman container exists $APP_NAME-minio; then
+          podman run -d \
+            --name $APP_NAME-minio \
+            --restart unless-stopped \
+            --network $APP_NAME \
+            -p 127.0.0.1:$MINIO_PORT:9000 \
+            --env-file ~/$APP_NAME/minio.env \
+            -v $APP_NAME-minio-data:/data \
+            quay.io/minio/minio:latest server /data
+          for i in \$(seq 1 30); do
+            curl -sf http://127.0.0.1:$MINIO_PORT/minio/health/live && break
+            sleep 1
+          done
+        fi
+
+        podman stop $APP_NAME || true
+        podman rm $APP_NAME || true
+        podman run -d \
+          --name $APP_NAME \
+          --restart unless-stopped \
+          --network $APP_NAME \
+          -p 127.0.0.1:$APP_PORT:8080 \
+          --env-file ~/$APP_NAME/app.env \
+          "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+
+        podman image prune -f || true
+      ENDSSH

@@ -91,6 +91,10 @@ func main() {
 		ratings.GET("/:placeId", ratingsH.GetMine)
 	}
 
+	if cfg.StaticDir != "" {
+		r.NoRoute(handlers.SPA(cfg.StaticDir))
+	}
+
 	port := cfg.Port
 	log.Printf("spotslog api listening on :%s", port)
 	if err := r.Run(":" + port); err != nil {
