@@ -10,6 +10,9 @@ import { getToken } from "@/api/client";
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior() {
+    return { top: 0}
+  },
   routes: [
     { path: "/",
       name: "home",
@@ -42,7 +45,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: "/add-place",
+      path: "/add-place/:id?",
       name: "add-place",
       component: AddPlaceView,
       meta: { requiresAuth: true },

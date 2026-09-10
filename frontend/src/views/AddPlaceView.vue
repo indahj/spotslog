@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { authApi, placesApi } from '@/api';
-import { CATEGORY_LABELS, type PlaceCategory } from '@/api/types';
+import { CATEGORY_LABELS, type Place, type PlaceCategory } from '@/api/types';
 import { useVisitsStore } from '@/stores/visits';
 import { useAuthStore } from '@/stores/auth';
 import { OpenStreetMapProvider } from 'leaflet-geosearch';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 
 const router = useRouter()
 const visits = useVisitsStore()
 const auth = useAuthStore()
+const route = useRoute()
 
+const placeId = computed(() => (route.params.id ? Number(route.params.id) : null))
+const isEditMode = computed(() => placeId.value !== null)
 const categories = Object.keys(CATEGORY_LABELS) as PlaceCategory[]
 
 const name = ref("")
@@ -81,19 +84,35 @@ async function submit() {
 
   error.value = null
   submitting.value = true
+  let place: Place
   try {
-    const place = await placesApi.create({
-      name: name.value,
-      category: category.value,
-      address: address.value,
-      district: district.value || undefined,
-      lat: lat.value,
-      lng: lng.value,
-      description: description.value || undefined,
-      price_range: priceRange.value || undefined,
-      source: source.value,
-      visibility: visibility.value
-    })
+    if (isEditMode.value) {
+      place = await placesApi.update(placeId.value!, {
+        name: name.value,
+        category: category.value,
+        address: address.value,
+        district: district.value || undefined,
+        lat: lat.value,
+        lng: lng.value,
+        description: description.value || undefined,
+        price_range: priceRange.value || undefined,
+        source: source.value,
+        visibility: visibility.value
+      })
+    } else {
+      place = await placesApi.create({
+        name: name.value,
+        category: category.value,
+        address: address.value,
+        district: district.value || undefined,
+        lat: lat.value,
+        lng: lng.value,
+        description: description.value || undefined,
+        price_range: priceRange.value || undefined,
+        source: source.value,
+        visibility: visibility.value
+      })
+    }
 
     let photoError: string | null = null;
     if (photo.value) {
@@ -104,7 +123,7 @@ async function submit() {
       }
     }
 
-    if (!auth.isAdmin && alsoMarkVisited.value) {
+    if (!isEditMode.value && !auth.isAdmin && alsoMarkVisited.value) {
       await visits.markVisited(place.id)
     }
 
@@ -114,7 +133,7 @@ async function submit() {
       return
     }
 
-    if (!auth.isAdmin && alsoMarkVisited.value) {
+    if (!isEditMode.value && !auth.isAdmin && alsoMarkVisited.value) {
       router.push({name: "visits"})
     } else {
       router.push({name: "place-detail", params: {id: place.id}})
@@ -126,12 +145,28 @@ async function submit() {
   }
 }
 
+onMounted(async () => {
+  if (isEditMode.value) {
+    const { place } = await placesApi.get(placeId.value!)
+    name.value = place.name
+    category.value = place.category
+    address.value = place.address
+    district.value = place.district ?? ""
+    lat.value = place.lat
+    lng.value = place.lng
+    description.value = place.description ?? ""
+    priceRange.value = place.price_range ?? ""
+    visibility.value = place.visibility
+  }
+})
+
 </script>
 
 <template>
 
   <div class="container narrow">
-    <h1>Add a place</h1>
+    <button v-if="isEditMode" type="button" class="muted black-link" @click="router.back()">← Back</button>
+    <h1>{{ isEditMode ? "Edit place" : "Add a place" }}</h1>
     <p class="muted">
       Somewhere that isn't in the recommendations yet. Keep it private for your own records, or make it public so it shows up on the homepage for everyone.
     </p>
@@ -209,7 +244,7 @@ async function submit() {
       <p v-if="error" class="error">{{ error }}</p>
 
       <button class="primary" type="submit" :disabled="submitting">
-        {{ submitting ? "Saving…" : "Add place" }}
+        {{ submitting ? "Saving…" : (isEditMode ? "Save changes" : "Add place") }}
       </button>
     </form>
 
@@ -271,5 +306,15 @@ async function submit() {
 
 textarea {
   resize: vertical;
+}
+
+.black-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: block;
 }
 </style>

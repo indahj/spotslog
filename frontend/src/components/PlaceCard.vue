@@ -2,7 +2,9 @@
 import { CATEGORY_LABELS, type Place } from '@/api/types';
 import { RouterLink } from 'vue-router';
 import placeholderImage from "@/assets/place-placeholder.svg";
+import { useAuthStore } from '@/stores/auth';
 
+const auth = useAuthStore()
 
 defineProps<{
   place: Place
@@ -48,6 +50,14 @@ const emit = defineEmits<{
       <button :disabled="visited" @click="emit('markVisited', place.id)">
         {{visited ? "✓ Visited" : "Mark visited"  }}
       </button>
+      <RouterLink
+        v-if="auth.isAdmin"
+        :to="{name: 'add-place', params: {id: place.id}}"
+        class="edit-link"
+      >
+        <font-awesome-icon icon="pen"/>
+        Edit
+      </RouterLink>
     </footer>
 
   </article>
@@ -123,4 +133,20 @@ button.active {
   color: #f5b301;
 }
 
+.edit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.edit-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 </style>

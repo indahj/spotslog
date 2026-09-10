@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CATEGORY_LABELS, type PlaceCategory } from "@/api/types";
+import { CATEGORY_LABELS, type Place, type PlaceCategory } from "@/api/types";
 import PlaceCard from "@/components/PlaceCard.vue";
 import PlaceMap from "@/components/PlaceMap.vue";
 import HeroSlideshow from "@/components/HeroSlideshow.vue";
@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth";
 import { usePlacesStore } from "@/stores/places";
 import { useSavedStore } from "@/stores/saved";
 import { useVisitsStore } from "@/stores/visits";
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 
 const places = usePlacesStore()
 const auth = useAuthStore()
@@ -19,9 +19,7 @@ const area = ref("")
 const showMap = ref(false)
 
 const categories = Object.keys(CATEGORY_LABELS) as PlaceCategory[]
-const newestPlaces = computed(() =>
-  places.places.filter(p => p.source === "curated").slice(0,3)
-)
+const newestPlaces = ref<Place[]>([])
 
 async function applyFilters() {
   if (!category.value && !area.value) {
@@ -42,6 +40,7 @@ function resetFilters() {
 
 onMounted(async () => {
   await places.loadHomepage()
+  newestPlaces.value = places.places.filter(p => p.source === "curated").slice(0,3)
   if (auth.isAuthenticated) {
     await Promise.all([saved.load(), visits.load()])
   }
@@ -70,7 +69,7 @@ onMounted(async () => {
 
     <div class="hero-art">
       <HeroSlideshow v-if="newestPlaces.length > 0" :place="newestPlaces" />
-      <img v-else src="../assets/hero.svg" alt="">
+      <!-- <img v-else src="../assets/hero.svg" alt=""> -->
     </div>
 
     </section>

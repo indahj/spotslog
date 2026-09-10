@@ -23,10 +23,7 @@ func (h *SavedHandler) List(c *gin.Context) {
 	userID := c.GetInt(middleware.ContextUserIDKey)
 
 	rows, err := h.DB.Query(c.Request.Context(),
-		`SELECT s.id, s.user_id, s.place_id, s.created_at,
-		 p.id, p.name, p.category, p.address, p.district, p.lat, p.lng
-		 FROM saved_places s JOIN places p ON p.id = s.place_id
-		 WHERE s.user_id = $1 ORDER BY s.created_at DESC`,
+		`SELECT id, user_id, place_id, created_at FROM saved_places WHERE user_id = $1 ORDER BY created_at DESC`,
 		userID,
 	)
 	if err != nil {
@@ -36,16 +33,54 @@ func (h *SavedHandler) List(c *gin.Context) {
 	defer rows.Close()
 
 	saved := []models.SavedPlace{}
+	placeIDs := []int{}
 	for rows.Next() {
 		var s models.SavedPlace
-		var p models.Place
-		if err := rows.Scan(&s.ID, &s.UserID, &s.PlaceID, &s.CreatedAt,
-			&p.ID, &p.Name, &p.Category, &p.Address, &p.District, &p.Lat, &p.Lng); err != nil {
+		if err := rows.Scan(&s.ID, &s.UserID, &s.PlaceID, &s.CreatedAt); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read saved places"})
 			return
 		}
-		s.Place = &p
 		saved = append(saved, s)
+		placeIDs = append(placeIDs, s.PlaceID)
+	}
+
+	if len(placeIDs) > 0 {
+		placeRows, err := h.DB.Query(c.Request.Context(),
+			`SELECT id, name, category, address, district, lat, lng, description,
+			 price_range, opening_hours, menu, source, visibility, created_by, created_at, updated_at
+			 FROM places WHERE id = ANY($1)`,
+			placeIDs,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load saved place details"})
+			return
+		}
+		defer placeRows.Close()
+
+		places, err := scanPlaces(placeRows)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read place details"})
+			return
+		}
+
+		if err := attachCoverPhotos(c.Request.Context(), places, h.DB); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load place photos"})
+			return
+		}
+		if err := attachRatings(c.Request.Context(), places, h.DB); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load ratings"})
+			return
+		}
+
+		byID := map[int]models.Place{}
+		for _, p := range places {
+			byID[p.ID] = p
+		}
+		for i := range saved {
+			if p, ok := byID[saved[i].PlaceID]; ok {
+				saved[i].Place = &p
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, saved)

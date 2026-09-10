@@ -82,12 +82,12 @@ func (h *PlacesHandler) List(c *gin.Context) {
 		return
 	}
 
-	if err := h.attachCoverPhotos(c.Request.Context(), places); err != nil {
+	if err := attachCoverPhotos(c.Request.Context(), places, h.DB); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load place photos"})
 		return
 	}
 
-	if err := h.attachRatings(c.Request.Context(), places); err != nil {
+	if err := attachRatings(c.Request.Context(), places, h.DB); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load ratings"})
 		return
 	}
@@ -115,12 +115,12 @@ func (h *PlacesHandler) Homepage(c *gin.Context) {
 		return
 	}
 
-	if err := h.attachCoverPhotos(c.Request.Context(), places); err != nil {
+	if err := attachCoverPhotos(c.Request.Context(), places, h.DB); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load place photos"})
 		return
 	}
 
-	if err := h.attachRatings(c.Request.Context(), places); err != nil {
+	if err := attachRatings(c.Request.Context(), places, h.DB); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load ratings"})
 		return
 	}
@@ -426,7 +426,7 @@ func scanPlaces(rows pgx.Rows) ([]models.Place, error) {
 // attachCoverPhotos fetches one representative photo per place (the
 // earliest uploaded) and fills in each place's CoverPhotoURL — one batched
 // query rather than one per place, same reasoning as the visit photos.
-func (h *PlacesHandler) attachCoverPhotos(ctx context.Context, places []models.Place) error {
+func attachCoverPhotos(ctx context.Context, places []models.Place, db *pgxpool.Pool) error {
 	if len(places) == 0 {
 		return nil
 	}
@@ -438,7 +438,7 @@ func (h *PlacesHandler) attachCoverPhotos(ctx context.Context, places []models.P
 		byID[p.ID] = i
 	}
 
-	rows, err := h.DB.Query(ctx,
+	rows, err := db.Query(ctx,
 		`SELECT place_id, url FROM place_photos WHERE place_id = ANY($1) ORDER BY place_id, created_at ASC`,
 		ids,
 	)
@@ -465,7 +465,7 @@ func (h *PlacesHandler) attachCoverPhotos(ctx context.Context, places []models.P
 	return rows.Err()
 }
 
-func (h *PlacesHandler) attachRatings(ctx context.Context, places []models.Place) error {
+func attachRatings(ctx context.Context, places []models.Place, db *pgxpool.Pool) error {
 
 	if len(places) == 0 {
 		return nil
@@ -478,7 +478,7 @@ func (h *PlacesHandler) attachRatings(ctx context.Context, places []models.Place
 		byID[p.ID] = i
 	}
 
-	rows, err := h.DB.Query(ctx,
+	rows, err := db.Query(ctx,
 		`SELECT place_id, AVG(rating), COUNT(*) FROM place_ratings WHERE place_id = ANY($1) GROUP BY place_id`,
 		ids,
 	)
