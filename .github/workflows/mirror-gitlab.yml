@@ -11,5 +11,5 @@ jobs:
       - name: Push to GitLab
         run: |
           git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/sdev9375152/indah/spotslog.git
-          git push --force gitlab "refs/remotes/origin/:refs/heads/"
+          git push --force gitlab "refs/remotes/origin/*:refs/heads/*"
           git push --force --tags gitlab
