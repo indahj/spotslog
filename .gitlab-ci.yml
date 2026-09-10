@@ -72,6 +72,12 @@ deploy_docker:
     - mkdir -p ~/.ssh
     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
   script:
+    # Fail fast if a variable is empty (e.g. marked "Protected" but branch isn't).
+    - |
+      for v in DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD DB_SCHEMA JWT_SECRET S3_ACCESS_KEY S3_SECRET_KEY; do
+        eval "val=\${$v}"
+        [ -n "$val" ] || { echo "CI variable $v is empty or not set"; exit 1; }
+      done
     - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p ~/traefik/dynamic"
     - scp -P "$SSH_PORT" traefik/dynamic/* "$SSH_USER@$SSH_HOST:~/traefik/dynamic/"
     - |
@@ -82,21 +88,20 @@ deploy_docker:
 
         podman network exists $APP_NAME || podman network create $APP_NAME
 
-        # Photo storage: created once, data kept in a named volume across deploys.
-        if ! podman container exists $APP_NAME-minio; then
-          podman run --name $APP_NAME-minio -d \
-            -p 127.0.0.1:$MINIO_PORT:9000 \
-            --network $APP_NAME \
-            -e MINIO_ROOT_USER='${S3_ACCESS_KEY}' \
-            -e MINIO_ROOT_PASSWORD='${S3_SECRET_KEY}' \
-            -v $APP_NAME-minio-data:/data \
-            --restart always \
-            quay.io/minio/minio:latest server /data
-          for i in \$(seq 1 30); do
-            curl -sf http://127.0.0.1:$MINIO_PORT/minio/health/live && break
-            sleep 1
-          done
-        fi
+        # Photo storage. Recreated on every deploy so its credentials always match
+        # the app's S3_ACCESS_KEY/S3_SECRET_KEY; photos persist in the named volume.
+        podman run --name $APP_NAME-minio -d --replace \
+          -p 127.0.0.1:$MINIO_PORT:9000 \
+          --network $APP_NAME \
+          -e MINIO_ROOT_USER='${S3_ACCESS_KEY}' \
+          -e MINIO_ROOT_PASSWORD='${S3_SECRET_KEY}' \
+          -v $APP_NAME-minio-data:/data \
+          --restart always \
+          quay.io/minio/minio:latest server /data
+        for i in \$(seq 1 30); do
+          curl -sf http://127.0.0.1:$MINIO_PORT/minio/health/live && break
+          sleep 1
+        done
 
         podman run --name $APP_NAME -d --replace \
           -p 127.0.0.1:$APP_PORT:8080 \
