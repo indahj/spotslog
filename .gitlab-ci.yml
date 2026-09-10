@@ -72,28 +72,7 @@ deploy_docker:
     - mkdir -p ~/.ssh
     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
   script:
-    # Env files keep secrets off the remote command line and avoid shell-quoting
-    # issues (DATABASE_URL contains '&' and '?').
-    - |
-      umask 077
-      {
-        printf '%s\n' "DATABASE_URL=$DATABASE_URL"
-        printf '%s\n' "JWT_SECRET=$JWT_SECRET"
-        printf '%s\n' "JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-72}"
-        printf '%s\n' "S3_ENDPOINT=$APP_NAME-minio:9000"
-        printf '%s\n' "S3_ACCESS_KEY=$S3_ACCESS_KEY"
-        printf '%s\n' "S3_SECRET_KEY=$S3_SECRET_KEY"
-        printf '%s\n' "S3_BUCKET=$S3_BUCKET"
-        printf '%s\n' "S3_USE_SSL=false"
-        printf '%s\n' "S3_PUBLIC_BASE_URL=$APP_URL/$S3_BUCKET"
-        printf '%s\n' "CORS_ALLOWED_ORIGIN=$APP_URL"
-      } > app.env
-      {
-        printf '%s\n' "MINIO_ROOT_USER=$S3_ACCESS_KEY"
-        printf '%s\n' "MINIO_ROOT_PASSWORD=$S3_SECRET_KEY"
-      } > minio.env
-    - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p ~/$APP_NAME ~/traefik/dynamic && chmod 700 ~/$APP_NAME"
-    - scp -P "$SSH_PORT" app.env minio.env "$SSH_USER@$SSH_HOST:~/$APP_NAME/"
+    - ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p ~/traefik/dynamic"
     - scp -P "$SSH_PORT" traefik/dynamic/* "$SSH_USER@$SSH_HOST:~/traefik/dynamic/"
     - |
       ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << ENDSSH
@@ -105,13 +84,13 @@ deploy_docker:
 
         # Photo storage: created once, data kept in a named volume across deploys.
         if ! podman container exists $APP_NAME-minio; then
-          podman run -d \
-            --name $APP_NAME-minio \
-            --restart unless-stopped \
-            --network $APP_NAME \
+          podman run --name $APP_NAME-minio -d \
             -p 127.0.0.1:$MINIO_PORT:9000 \
-            --env-file ~/$APP_NAME/minio.env \
+            --network $APP_NAME \
+            -e MINIO_ROOT_USER='${S3_ACCESS_KEY}' \
+            -e MINIO_ROOT_PASSWORD='${S3_SECRET_KEY}' \
             -v $APP_NAME-minio-data:/data \
+            --restart always \
             quay.io/minio/minio:latest server /data
           for i in \$(seq 1 30); do
             curl -sf http://127.0.0.1:$MINIO_PORT/minio/health/live && break
@@ -119,14 +98,21 @@ deploy_docker:
           done
         fi
 
-        podman stop $APP_NAME || true
-        podman rm $APP_NAME || true
-        podman run -d \
-          --name $APP_NAME \
-          --restart unless-stopped \
-          --network $APP_NAME \
+        podman run --name $APP_NAME -d --replace \
           -p 127.0.0.1:$APP_PORT:8080 \
-          --env-file ~/$APP_NAME/app.env \
+          --network $APP_NAME \
+          -e PORT=8080 \
+          -e DATABASE_URL='postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&search_path=${DB_SCHEMA}' \
+          -e JWT_SECRET='${JWT_SECRET}' \
+          -e JWT_EXPIRY_HOURS='${JWT_EXPIRY_HOURS:-72}' \
+          -e S3_ENDPOINT='$APP_NAME-minio:9000' \
+          -e S3_ACCESS_KEY='${S3_ACCESS_KEY}' \
+          -e S3_SECRET_KEY='${S3_SECRET_KEY}' \
+          -e S3_BUCKET='${S3_BUCKET}' \
+          -e S3_USE_SSL=false \
+          -e S3_PUBLIC_BASE_URL='${APP_URL}/${S3_BUCKET}' \
+          -e CORS_ALLOWED_ORIGIN='${APP_URL}' \
+          --restart always \
           "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
 
         podman image prune -f || true
