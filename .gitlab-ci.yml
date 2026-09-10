@@ -6,8 +6,8 @@ stages:
 variables:
   APP_NAME: spotslog
   APP_URL: https://spotslog.ssomar.fr
-  APP_PORT: "3070"    # must match traefik/dynamic/spotslog.yml
-  MINIO_PORT: "3071"  # must match traefik/dynamic/spotslog.yml
+  APP_PORT: "3095"    # must match traefik/dynamic/spotslog.yml
+  MINIO_PORT: "3096"  # must match traefik/dynamic/spotslog.yml
   S3_BUCKET: spotslog-photos
 
 # ---------- Test (branches non-main) ----------
