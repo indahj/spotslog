@@ -1,0 +1,10 @@
+.git
+.gitlab-ci.yml
+traefik/
+**/node_modules
+**/dist
+**/.vite
+**/.env
+**/*.env
+backend/bin/
+*.exe

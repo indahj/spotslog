@@ -1,0 +1,39 @@
+http:
+  routers:
+    spotslog:
+      rule: "Host(`spotslog.ssomar.fr`)"
+      entryPoints:
+        - websecure
+      service: spotslog
+      tls:
+        certResolver: letsencrypt
+    # Photos are public-read objects in MinIO (path-style: /<bucket>/<key>).
+    # Longer rule => higher priority than the catch-all router above.
+    spotslog-photos:
+      rule: "Host(`spotslog.ssomar.fr`) && PathPrefix(`/spotslog-photos/`)"
+      entryPoints:
+        - websecure
+      service: spotslog-photos
+      tls:
+        certResolver: letsencrypt
+    spotslog-http:
+      rule: "Host(`spotslog.ssomar.fr`)"
+      entryPoints:
+        - web
+      middlewares:
+        - spotslog-redirect-to-https
+      service: spotslog
+  services:
+    spotslog:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3070"
+    spotslog-photos:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3071"
+  middlewares:
+    spotslog-redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true

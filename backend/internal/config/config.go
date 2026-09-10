@@ -17,6 +17,7 @@ type Config struct {
 	S3UseSSL          bool
 	S3PublicBase      string
 	CORSAllowedOrigin string
+	StaticDir         string
 }
 
 func Load() Config {
@@ -32,6 +33,8 @@ func Load() Config {
 		S3UseSSL:          getEnv("S3_USE_SSL", "false") == "true",
 		S3PublicBase:      getEnv("S3_PUBLIC_BASE_URL", ""),
 		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", "http://localhost:5174"),
+		// Directory holding the built frontend. Empty in local dev (Vite serves it).
+		StaticDir: getEnv("STATIC_DIR", ""),
 	}
 }
 
