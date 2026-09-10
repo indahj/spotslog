@@ -27,11 +27,11 @@ http:
     spotslog:
       loadBalancer:
         servers:
-          - url: "http://127.0.0.1:3070"
+          - url: "http://127.0.0.1:3095"
     spotslog-photos:
       loadBalancer:
         servers:
-          - url: "http://127.0.0.1:3071"
+          - url: "http://127.0.0.1:3096"
   middlewares:
     spotslog-redirect-to-https:
       redirectScheme:
