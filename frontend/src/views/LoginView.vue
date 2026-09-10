@@ -31,7 +31,7 @@ async function submit() {
 
 <template>
   <div class="container narrow">
-    <h1>Log in</h1>
+    <h1>Welcome to Spotslog!</h1>
 
     <form class="card" @submit.prevent="submit">
       <div class="field">

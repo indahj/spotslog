@@ -165,7 +165,7 @@ onMounted(async () => {
 <template>
 
   <div class="container narrow">
-    <button type="button" class="muted black-link" @click="router.back()">← Back</button>
+    <button v-if="isEditMode" type="button" class="muted black-link" @click="router.back()">← Back</button>
     <h1>{{ isEditMode ? "Edit place" : "Add a place" }}</h1>
     <p class="muted">
       Somewhere that isn't in the recommendations yet. Keep it private for your own records, or make it public so it shows up on the homepage for everyone.

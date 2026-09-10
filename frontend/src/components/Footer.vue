@@ -6,14 +6,14 @@ import linkedinIcon from "@/assets/linkedin-icon.svg";
 <template>
   <footer class="site-footer">
     <div class="footer-inner">
-      <p class="muted">Est. 2026 - Belle's portofolio</p>
+      <p class="muted">2026 - indah's portofolio</p>
 
       <div class="footer-links">
         <span class="muted">find me on:</span>
-        <a href="#" target="'_blank'" rel="noopener noreferrer" aria-label="GitHub">
+        <a href="https://github.com/indahj/spotslog" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
           <img :src="githubIcon" alt="GitHub" width="20" height="20">
         </a>
-        <a href="#" target="'_blank'" rel="noopener noreferrer" aria-label="Linkedln">
+        <a href="https://www.linkedin.com/in/indahjuliani/" target="_blank" rel="noopener noreferrer" aria-label="Linkedln">
           <img :src="linkedinIcon" alt="linkedln" width="20" height="20">
         </a>
       </div>
