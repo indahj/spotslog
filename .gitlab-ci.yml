@@ -47,24 +47,15 @@ test_backend:
 # ---------- Build & Push Docker image (main) ----------
 publish_docker:
   stage: publish_docker
-  image: docker:latest
-  services:
-    - docker:dind
+  image: quay.io/podman/stable
   only:
     - main
-  variables:
-    DOCKER_TLS_CERTDIR: ""
   before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - echo "$CI_REGISTRY_PASSWORD" | podman login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    # No secrets as build args: they would be baked into the image layers.
-    # Runtime config is injected by the deploy job instead.
-    - docker build
-      -t "$CI_REGISTRY_IMAGE:latest"
-      -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-      .
-    - docker push "$CI_REGISTRY_IMAGE:latest"
-    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - podman build -t "$CI_REGISTRY_IMAGE:latest" -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - podman push "$CI_REGISTRY_IMAGE:latest"
+    - podman push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
 
 # ---------- Deploy via SSH + Podman (main) ----------
 deploy_docker:
